@@ -494,7 +494,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_RaycastPadding: {x: 4, y: 4, z: 4, w: 4}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -2879,16 +2879,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   rotateSpeedHorizontal: 100
   rotateSpeedVertical: 200
-  rollTorque: 100
-  thrust: 100
-  upThrust: 100
-  strafeThrust: 100
+  rollTorque: 200
+  thrust: 50
+  upThrust: 50
+  strafeThrust: 50
   thrustGlideReduction: 0.001
   upDownGlideReduction: 0.001
   leftRightGlideReduction: 0.001
-  propelThrust: 100000
-  propelUpThrust: 100000
-  propelStrafeThrust: 100000
+  propelThrust: 80000
+  propelUpThrust: 80000
+  propelStrafeThrust: 80000
   rb: {fileID: 1457430964}
   characterPivot: {fileID: 919132148652376858}
   vCam: {fileID: 2063359172}
@@ -2898,7 +2898,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   grabRange: 1
-  playerIK: {fileID: 560419787}
+  grabPadding: 50
 --- !u!114 &1457430966
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4171,14 +4171,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2d8418b0b9634b1892b0268dd9c2743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boneShape: 1
-  drawBones: 1
-  drawTripods: 0
-  boneSize: 1
-  tripodSize: 1
-  boneColor: {r: 0, g: 0, b: 1, a: 0.5}
-  m_Transforms:
-  - {fileID: 2357603140761241696}
 --- !u!4 &36482317251447856
 Transform:
   m_ObjectHideFlags: 0
@@ -6254,13 +6246,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2d8418b0b9634b1892b0268dd9c2743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boneShape: 1
-  drawBones: 1
-  drawTripods: 0
-  boneSize: 1
-  tripodSize: 1
-  boneColor: {r: 0, g: 0, b: 1, a: 0.5}
-  m_Transforms: []
 --- !u!4 &7070681979788607122
 Transform:
   m_ObjectHideFlags: 0
@@ -6371,14 +6356,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2d8418b0b9634b1892b0268dd9c2743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boneShape: 1
-  drawBones: 1
-  drawTripods: 0
-  boneSize: 1
-  tripodSize: 1
-  boneColor: {r: 0, g: 0, b: 1, a: 0.5}
-  m_Transforms:
-  - {fileID: 5745843360791950502}
 --- !u!1 &7334620941803855248
 GameObject:
   m_ObjectHideFlags: 0
