@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 using System.ComponentModel.Design.Serialization;
 using Cinemachine;
 using UnityEngine.UI;
+using TMPro;
 using Microsoft.Unity.VisualStudio.Editor;
 
 
@@ -32,22 +33,34 @@ public class PlayerZeroG : MonoBehaviour
     [SerializeField, Range(0.001f, 0.999f)]
     private float leftRightGlideReduction = 0.111f;
 
+    [Header("== Grabbing Settings ==")]
+    // Grabbing mechanic variables
+    private bool isGrabbing = false;
+    private Transform grabbedBar;
+    [SerializeField]
+    private LayerMask barLayer; // Set a specific layer containing bars to grab onto
+    [SerializeField]
+    private float grabRange = 3f; // Range within which the player can grab bars
+    [SerializeField]
+    private float grabPadding = 50f;
     //Propel off bar 
     [SerializeField]
     private float propelThrust = 100f;
     [SerializeField]
-    private float propelUpThrust = 50f;
-    [SerializeField]
     private float propelStrafeThrust = 50f;
-
     private float glide = 0f;
     private float verticalGlide = 0f;
     private float horizontalGlide = 0f;
 
-    private Camera mainCam;
-
+    [Header("== UI Settings ==")]
     [SerializeField]
-    Rigidbody rb;
+    private Rigidbody rb;
+    [SerializeField]
+    private TextMeshProUGUI grabUIText;
+    [Header("== Camera/Body Refernces ==")]
+    private Cinemachine.CinemachinePOV pov;
+    private Camera mainCam;
+    private bool showTutorialMessages = true;
 
     //Variables for camera turn and UI interaction
     [SerializeField]
@@ -56,33 +69,31 @@ public class PlayerZeroG : MonoBehaviour
     private Cinemachine.CinemachineVirtualCamera vCam;
     [SerializeField]
     private UnityEngine.UI.Image crosshair;
-
-    private Cinemachine.CinemachinePOV pov;
-
-    float horizontalMax;
-    float horizontalMin;
-    float verticalMax;
-    float verticalMin;
+    //FOV references
+    private float horizontalMax;
+    private float horizontalMin;
+    private float verticalMax;
+    private float verticalMin;
 
 
     //Input Values
     public InputActionReference grab;
-
     private float thrust1D;
     private float upDown1D;
     private float strafe1D;
     private float roll1D;
     private Vector2 pitchYaw;
 
-    // Grabbing mechanic variables
-    private bool isGrabbing = false;
-    private Transform grabbedBar;
-    [SerializeField] 
-    private LayerMask barLayer; // Set a specific layer for bars to grab onto
-    [SerializeField] 
-    private float grabRange = 3f; // Range within which the player can grab bars
-    [SerializeField]
-    private float grabPadding = 50f;
+    // Track if the movement keys were released
+    private bool movementKeysReleased;
+
+    //Properties
+    //this property allows showTutorialMessages to be assigned outside of the script. Needed for the tutorial mission
+    public bool ShowTurorialMessages
+    {
+        get { return showTutorialMessages; }
+        set { showTutorialMessages = value; }
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -112,6 +123,7 @@ public class PlayerZeroG : MonoBehaviour
 
         if (!isGrabbing)
         {
+            //handle how the player moves in open space
             HandleFreeMovement();
 
             // Check if the player reaches horizontal limits and rotate the mesh accordingly
@@ -130,6 +142,8 @@ public class PlayerZeroG : MonoBehaviour
         {
             HandleGrabMovement(horizontalAxis, verticalAxis);
         }
+
+        GrabUIText();
     }
 
     //This method will handle all inputs and how they make the ship move
@@ -197,8 +211,6 @@ public class PlayerZeroG : MonoBehaviour
             }
 
             PropelOffBar();
-            pov.m_HorizontalAxis.m_MaxValue = 180;
-            pov.m_HorizontalAxis.m_MinValue = -180;
         }
         else if (!isGrabbing)
         {
@@ -266,6 +278,28 @@ public class PlayerZeroG : MonoBehaviour
         Debug.Log("Raycast did not hit anything");
     }
 
+    private bool IsInRangeofBar()
+    {
+        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, crosshair.rectTransform.position);
+        float screenWidth = Screen.width;
+        float screenHeight = Screen.height;
+        Vector2 paddedMin = new Vector2(screenPoint.x - grabPadding, screenPoint.y - grabPadding);
+        Vector2 paddedMax = new Vector2(screenPoint.x + grabPadding, screenPoint.y + grabPadding);
+
+        for (float x = paddedMin.x; x < paddedMax.x; x += grabPadding / 2)
+        {
+            for (float y = paddedMin.y; y < paddedMax.y; y += grabPadding / 2)
+            {
+                Ray ray = mainCam.ScreenPointToRay(new Vector3(x, y, 0));
+                if (Physics.Raycast(ray, grabRange, barLayer))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Release the bar and enable movement again
     private void ReleaseBar()
     {
@@ -275,34 +309,70 @@ public class PlayerZeroG : MonoBehaviour
 
     }
 
+    private void GrabUIText()
+    {
+        if (showTutorialMessages)
+        {
+            if (isGrabbing)
+            {
+                grabUIText.text = "use 'WASD' to propel forwards, back, left, right";
+            }
+            else if (IsInRangeofBar() && !isGrabbing)
+            { 
+                grabUIText.text = "press and hold 'Right Mouse Button' to grab and hold onto";
+            }
+            else if(!isGrabbing && !IsInRangeofBar())
+            {
+                grabUIText.text = null;
+            }
+        }
+        else if (!showTutorialMessages)
+        {
+            return;
+        }
+    }
+
     //Player uses WASD to propel themselves faster, only while currently grabbing a bar
     private void PropelOffBar()
     {
+        //if the player is grabbing and no movement buttons are currently being pressed
         if(isGrabbing)
         {
+            // Check if no movement buttons are currently being pressed
+            bool isThrusting = Mathf.Abs(thrust1D) > 0.1f;
+            bool isStrafing = Mathf.Abs(strafe1D) > 0.1f;
 
-            Vector3 propelDirection = Vector3.zero;
+            if(movementKeysReleased && (isThrusting || isStrafing))
+            {
+                //initialize a vector 3 for the propel direction
+                Vector3 propelDirection = Vector3.zero;
 
-            if (thrust1D > 0.1f || thrust1D < -0.1f)
-            {
-                ReleaseBar();
-                propelDirection += mainCam.transform.forward * thrust1D * propelThrust;
-                Debug.Log("Propelled forward or back");
+                //if W or S are pressed
+                if (isThrusting)
+                {
+                    //release the bar and calculate the vector to propel based on the forward look
+                    ReleaseBar();
+                    propelDirection += mainCam.transform.forward * thrust1D * propelThrust;
+                    Debug.Log("Propelled forward or back");
+                }
+                //if A or D are pressed
+                else if (isStrafing)
+                {
+                    //release the bar and calculate the vector to propel based on the right look
+                    ReleaseBar();
+                    propelDirection += mainCam.transform.right * strafe1D * propelStrafeThrust;
+                    Debug.Log("Propelled right or left");
+                }
+                //add the propel force to the rigid body
+                rb.AddForce(propelDirection * Time.deltaTime);
+                // Set the flag to false since keys are now pressed
+                movementKeysReleased = false;
             }
-            else if (upDown1D > 0.1F || upDown1D < -0.1f)
+            // Update the flag if no movement keys are pressed
+            else if (!isThrusting && !isStrafing)
             {
-                ReleaseBar();
-                propelDirection += mainCam.transform.up * upDown1D * propelUpThrust;
-                Debug.Log("Propelled up or down");
+                movementKeysReleased = true;
             }
-            else if (strafe1D > 0.1f || strafe1D < -0.1f)
-            {
-                ReleaseBar();
-                propelDirection += mainCam.transform.right * strafe1D * propelStrafeThrust;
-                Debug.Log("Propelled right or left");
-            }
-
-            rb.AddForce(propelDirection * Time.deltaTime);
         }
     }
 
@@ -345,7 +415,6 @@ public class PlayerZeroG : MonoBehaviour
             }
         }
     }
-
 
     #region Input Methods
     //when we press the buttons on the keyboard or controller these methods pass the buttons through to read the values
